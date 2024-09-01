@@ -187,13 +187,20 @@ const quiz = {
     quizProgressText.innerText = `0/${questions.length}`;
   },
 
-  handleProgress: function () {
+  handleProgress: function (correct) {
     const progressLength = listSubmit.filter((item) => item >= 0);
     const R = quizProgress.getAttribute("r");
-    quizProgress.style = `stroke-dasharray: ${
-      (2 * Math.PI * R * progressLength.length) / questions.length
-    } 99999;`;
-    quizProgressText.innerText = `${progressLength.length}/${questions.length}`;
+    if (!isSubmit) {
+      quizProgress.style = `stroke-dasharray: ${
+        (2 * Math.PI * R * progressLength.length) / questions.length
+      } 99999;`;
+      quizProgressText.innerText = `${progressLength.length}/${questions.length}`;
+    } else {
+      quizProgress.style = `stroke-dasharray: ${
+        (2 * Math.PI * R * correct) / questions.length
+      } 99999;`;
+      quizProgressText.innerText = `${correct}/${questions.length}`;
+    }
   },
 
   handleNext: function () {
@@ -237,17 +244,20 @@ const quiz = {
   handleSubmit: function () {
     quizSubmit.addEventListener("click", () => {
       const progressLength = listSubmit.filter((item) => item >= 0);
+      let correct = 0;
       if (progressLength.length == questions.length) {
         questions.forEach((item, index) => {
           const result = results.find((res) => res.quiz_id === item.quiz_id);
           if (item.answers[listSubmit[index]] === result.answer) {
             listResults[index] = listSubmit[index];
+            correct++;
           } else {
             quizQuestions[index].classList.add("incorrect");
             listResults[index] = item.answers.indexOf(result.answer);
           }
         });
         isSubmit = true;
+        this.handleProgress(correct);
       } else {
         alert("No");
       }
