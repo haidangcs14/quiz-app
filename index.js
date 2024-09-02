@@ -1,103 +1,5 @@
-// ________FAKE_DATA_______________
-let questions = [
-  {
-    quiz_id: 1,
-    question:
-      "You can learn a lot about the local _______ by talking to local people.",
-    answers: ["territory", "area", "land", "nation"],
-  },
-  {
-    quiz_id: 2,
-    question:
-      "It's good to have someone to ________ you when you are visiting a new place.",
-    answers: ["lead", "take", "guide", "bring"],
-  },
-  {
-    quiz_id: 3,
-    question:
-      "When you ______ your destination, your tour guide will meet you at the airport.",
-    answers: ["arrive", "reach", "get", "achieve"],
-  },
-  {
-    quiz_id: 4,
-    question: "It can be quite busy here during the tourist ______",
-    answers: ["season", "phase", "period", "stage"],
-  },
-  {
-    quiz_id: 5,
-    question:
-      "Make sure you _______ a hotel before you come to our island, especially in the summer.",
-    answers: ["book", "keep", "put", "buy"],
-  },
-  {
-    quiz_id: 6,
-    question: "Captain Cook discovered Australia on a _______ to the Pacific.",
-    answers: ["vacation", "travel", "cruise", "voyage"],
-  },
-  {
-    quiz_id: 7,
-    question:
-      " Most tourist attractions in London charge an admission ________.",
-    answers: ["fare", "ticket", "fee", "pay"],
-  },
-  {
-    quiz_id: 8,
-    question: "The hotel where we are _______ is quite luxurious.",
-    answers: ["living", "existing", "remaining", "staying"],
-  },
-  {
-    quiz_id: 9,
-    question: "Is English an ________ language in your country?",
-    answers: ["mother", "official", "living", "old"],
-  },
-  {
-    quiz_id: 10,
-    question: "He spoke a ______ of French that we found hard to understand.",
-    answers: ["slang", "jargon", "dialect", "language"],
-  },
-];
-const results = [
-  {
-    quiz_id: 1,
-    answer: "area",
-  },
-  {
-    quiz_id: 3,
-    answer: "reach",
-  },
-  {
-    quiz_id: 2,
-    answer: "guide",
-  },
-  {
-    quiz_id: 4,
-    answer: "season",
-  },
-  {
-    quiz_id: 5,
-    answer: "book",
-  },
-  {
-    quiz_id: 6,
-    answer: "voyage",
-  },
-  {
-    quiz_id: 7,
-    answer: "fee",
-  },
-  {
-    quiz_id: 8,
-    answer: "staying",
-  },
-  {
-    quiz_id: 9,
-    answer: "official",
-  },
-  {
-    quiz_id: 10,
-    answer: "dialect",
-  },
-];
+const API_GET_QUESTIONS =
+  "https://script.google.com/macros/s/AKfycby1nEDDlcaMn2hbKh5Ry0ZPZz3AKui76Vz-xLqMxo6chlx3S9zNkLuciEaUlDi-LSxu/exec";
 
 const quizTimer = document.querySelector("#timmer");
 const quizProgress = document.querySelector("#progress");
@@ -112,18 +14,53 @@ const quizQuestionList = document.querySelector(".quiz-numbers ul");
 const quizAnswersItem = document.querySelectorAll(".quiz-answer-item");
 const quizTitle = document.querySelector("#quiz-title");
 
+let questions;
+let results;
 let currentIndex = null;
 let listSubmit = [];
 let listResults = [];
 let isSubmit = false;
 
+function shuffle(arr) {
+  return (arr = arr.sort(() => Math.random() - Math.random()));
+}
+
 const quiz = {
   randomQuestion: function () {
-    questions = questions.sort(() => Math.random() - Math.random());
+    questions = shuffle(questions);
     questions.forEach((q) => {
-      q.answers = q.answers.sort(() => Math.random() - Math.random());
+      q.answers = shuffle(q.answers);
     });
   },
+
+  getQuestions: async function () {
+    const res = await fetch(`${API_GET_QUESTIONS}?category=english`);
+    const data = await res.json();
+    questions = data;
+    console.log(questions);
+  },
+
+  getResults: async function () {
+    quizSubmit.innerText = "Submitting...";
+    const postData = {
+      category: "english",
+      questions: questions,
+    };
+    try {
+      const response = await fetch(API_GET_QUESTIONS, {
+        method: "POST",
+        body: JSON.stringify(postData),
+      });
+      const results = await response.json();
+      console.log(results);
+      this.handleCheckResults(results);
+      quizSubmit.innerText = "Result";
+      quizSubmit.style = "pointer-events:none";
+    } catch (error) {
+      alert("An error has occurred!");
+    }
+  },
+
   handleQuestionList: function () {
     quizQuestions.forEach((item, index) => {
       item.addEventListener("click", () => {
@@ -241,25 +178,31 @@ const quiz = {
     }
   },
 
+  handleCheckResults: function (results) {
+    let correct = 0;
+    questions.forEach((item, index) => {
+      const result = results.find((r) => r.quiz_id === item.quiz_id);
+      if (item.answers[listSubmit[index]] === result.answer) {
+        listResults[index] = listSubmit[index];
+        correct++;
+      } else {
+        quizQuestions[index].classList.add("incorrect");
+        listResults[index] = item.answers.indexOf(result.answer);
+      }
+    });
+    isSubmit = true;
+    this.handleProgress(correct);
+    quizQuestions[0].click();
+  },
+
   handleSubmit: function () {
     quizSubmit.addEventListener("click", () => {
-      const progressLength = listSubmit.filter((item) => item >= 0);
-      let correct = 0;
-      if (progressLength.length == questions.length) {
-        questions.forEach((item, index) => {
-          const result = results.find((res) => res.quiz_id === item.quiz_id);
-          if (item.answers[listSubmit[index]] === result.answer) {
-            listResults[index] = listSubmit[index];
-            correct++;
-          } else {
-            quizQuestions[index].classList.add("incorrect");
-            listResults[index] = item.answers.indexOf(result.answer);
-          }
-        });
-        isSubmit = true;
-        this.handleProgress(correct);
+      const progressLen = listSubmit.filter((item) => item >= 0);
+      if (progressLen.length === questions.length) {
+        console.log(listSubmit);
+        this.getResults();
       } else {
-        alert("No");
+        alert("You have not selected all the answers! Try again!");
       }
     });
   },
@@ -323,7 +266,8 @@ const quiz = {
     this.handleKeyDown();
     this.handleSubmit();
   },
-  start: function () {
+  start: async function () {
+    await this.getQuestions();
     this.randomQuestion();
     this.render();
     this.handle();
